@@ -12,4 +12,9 @@ const create = async (person) => {
   return response.data
 }
 
-export default { getAll, create }
+const deletePerson = async (id) => {
+  const response = await axios.delete(`${baseURL}/${id}`)
+  return response.data
+}
+
+export default { getAll, create, deletePerson }
