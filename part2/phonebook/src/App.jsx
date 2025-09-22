@@ -20,18 +20,22 @@ const App = () => {
 
   const addPerson = (event) => {
     event.preventDefault()
-    if (persons.find((person) => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`)
-      return
+    const personToUpdate = persons.find((person) => person.name === newName)
+    if (personToUpdate) {
+      if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
+        personService
+          .update(personToUpdate.id, { ...personToUpdate, number: newNumber })
+          .then((returnedPerson) => setPersons(persons.map((person) => person.id === returnedPerson.id ? returnedPerson : person )))
+      } else {
+        return
+      }
+    } else {
+      personService
+        .create({ name: newName, number: newNumber })
+        .then((person) => setPersons(persons.concat(person)))
     }
-    const newPerson = { name: newName, number: newNumber }
-    personService
-      .create(newPerson)
-      .then((person) => {
-        setPersons(persons.concat(person))
-        setNewName('')
-        setNewNumber('')
-      })
+    setNewName('')
+    setNewNumber('')
   }
 
   const deletePerson = (id, name) => {
