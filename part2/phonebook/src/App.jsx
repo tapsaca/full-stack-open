@@ -11,6 +11,7 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [notification, setNotification] = useState(null)
+  const [isErrorNotification, setIsErrorNotification] = useState(false)
 
   useEffect(() => {
     personService.getAll().then((persons) => {
@@ -18,7 +19,8 @@ const App = () => {
     })
   }, [])
 
-  const showNotification = (notification) => {
+  const showNotification = (notification, isError = false) => {
+    setIsErrorNotification(isError)
     setNotification(notification)
     setTimeout(() => {
       setNotification(null)
@@ -43,6 +45,15 @@ const App = () => {
               )
             )
             showNotification(`Number changed for ${returnedPerson.name}`)
+          })
+          .catch(() => {
+            showNotification(
+              `Information of ${personToUpdate.name} has already been removed from server`,
+              true
+            )
+            setPersons(
+              persons.filter((person) => person.id !== personToUpdate.id)
+            )
           })
       } else {
         return
@@ -82,7 +93,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
-      <Notification message={notification} />
+      <Notification message={notification} isError={isErrorNotification} />
       <Filter filter={filter} handleFilterChange={handleFilterChange} />
       <PersonForm
         handleSubmit={addPerson}
