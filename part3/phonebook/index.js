@@ -1,8 +1,10 @@
 const express = require('express')
+const cors = require('cors')
 const morgan = require('morgan')
 
 const app = express()
 
+app.use(cors())
 app.use(express.json())
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
@@ -66,7 +68,7 @@ app.post('/api/persons', (request, response) => {
     })
   }
   const person = {
-    id: Math.floor(Math.random() * 10000) + 1,
+    id: (Math.floor(Math.random() * 10000) + 1).toString(),
     name: body.name,
     number: body.number
   }
