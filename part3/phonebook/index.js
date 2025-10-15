@@ -13,11 +13,15 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :b
 
 morgan.token('body', (req) => req.method === 'POST' ? JSON.stringify(req.body) : '')
 
-app.get('/info', (request, response) => {
-  response.send(`<div>Phonebook has info for ${persons.length} people</div><div>${new Date()}</div>`)
+app.get('/info', (request, response, next) => {
+  Person.find({})
+    .then((persons) => {
+      response.send(`<div>Phonebook has info for ${persons.length} people</div><div>${new Date()}</div>`)
+    })
+    .catch((error) => next(error))
 })
 
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', (request, response, next) => {
   Person.find({})
     .then((persons) => {
       response.json(persons)
@@ -25,16 +29,18 @@ app.get('/api/persons', (request, response) => {
     .catch((error) => next(error))
 })
 
-app.get('/api/persons/:id', (request, response) => {
-  const id = request.params.id
-  const person = persons.find((person) => person.id === id)
-  if (!person) {
-    return response.status(404).end()
-  }
-  response.json(person)
+app.get('/api/persons/:id', (request, response, next) => {
+  Person.findById(request.params.id)
+    .then((person) => {
+      if (!person) {
+        return response.status(404).end()
+      }
+      response.json(person)
+    })
+    .catch((error) => next(error))
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const body = request.body
   if (!body.name) {
     return response.status(400).json({
@@ -52,7 +58,7 @@ app.post('/api/persons', (request, response) => {
     .catch((error) => next(error))
 })
 
-app.put('/api/persons/:id', (request, response) => {
+app.put('/api/persons/:id', (request, response, next) => {
   const { name, number } = request.body
   Person.findById(request.params.id)
     .then((person) => {
@@ -69,7 +75,7 @@ app.put('/api/persons/:id', (request, response) => {
     .catch((error) => next(error))
 })
 
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
     .then((result) => {
       response.status(204).end()
