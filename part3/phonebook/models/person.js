@@ -18,7 +18,16 @@ const personSchema = new mongoose.Schema({
     type: String,
     minLength: 3
   },
-  number: String
+  number: {
+    type: String,
+    minLength: 8,
+    validate: {
+      validator: (number) => {
+        return /^\d{2,3}-\d+$/.test(number)
+      },
+      message: 'invalid number'
+    }
+  }
 })
 
 personSchema.set('toJSON', {
