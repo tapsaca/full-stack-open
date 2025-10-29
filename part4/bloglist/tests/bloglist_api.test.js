@@ -101,6 +101,22 @@ test('blog is correctly added to the database', async () => {
   assert.strictEqual(match.author, newBlog.author)
 })
 
+test('blog with missing likes property defaults to 0', async () => {
+  const newBlog = {
+    title: 'No Likes',
+    author: 'Disliked',
+    url: 'http://meh.com'
+  }
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/)
+  const response = await api.get('/api/blogs')
+  const addedBlog = response.body.find((blog) => blog.title === 'No Likes')
+  assert.strictEqual(addedBlog.likes, 0)
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
