@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
 const Blog = require('../models/blog')
+const { send } = require('node:process')
 
 const api = supertest(app)
 
@@ -95,8 +96,8 @@ test('blog is correctly added to the database', async () => {
     .expect(201)
     .expect('Content-Type', /application\/json/)
   const response = await api.get('/api/blogs')
-  assert.strictEqual(response.body.length, listWithManyBlogs.length + 1)
   const match = response.body.find((blog) => blog.url === newBlog.url)
+  assert.strictEqual(response.body.length, listWithManyBlogs.length + 1)
   assert.strictEqual(match.title, newBlog.title)
   assert.strictEqual(match.author, newBlog.author)
 })
@@ -115,6 +116,30 @@ test('blog with missing likes property defaults to 0', async () => {
   const response = await api.get('/api/blogs')
   const addedBlog = response.body.find((blog) => blog.title === 'No Likes')
   assert.strictEqual(addedBlog.likes, 0)
+})
+
+test('title missing results in bad request', async () => {
+  const newBlog = {
+    author: 'Untitled',
+    url: 'http://untitled.com',
+    likes: 1
+  }
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
+})
+
+test('url missing results in bad request', async () => {
+  const newBlog = {
+    title: 'NO URL',
+    author: 'Urless',
+    likes: 1
+  }
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
 })
 
 after(async () => {
