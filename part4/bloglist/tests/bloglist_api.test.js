@@ -4,7 +4,6 @@ const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
 const Blog = require('../models/blog')
-const { send } = require('node:process')
 
 const api = supertest(app)
 
@@ -140,6 +139,17 @@ test('url missing results in bad request', async () => {
     .post('/api/blogs')
     .send(newBlog)
     .expect(400)
+})
+
+test('a blog can be deleted', async () => {
+  const blogToDelete = listWithManyBlogs[0]
+  await api
+    .delete(`/api/blogs/${blogToDelete._id}`)
+    .expect(204)
+  const response = await api.get('/api/blogs')
+  const titles = response.body.map((blog) => blog.title)
+  assert(!titles.includes(blogToDelete.title))
+  assert.strictEqual(response.body.length, listWithManyBlogs.length - 1)
 })
 
 after(async () => {
