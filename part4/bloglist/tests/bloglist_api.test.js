@@ -1,155 +1,124 @@
-const { test, after, beforeEach } = require('node:test')
+const { test, after, beforeEach, describe } = require('node:test')
 const assert = require('node:assert')
 const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
+const helper = require('./test_helper')
 const Blog = require('../models/blog')
 
 const api = supertest(app)
 
-const listWithManyBlogs = [
-  {
-    _id: '5a422a851b54a676234d17f7',
-    title: 'React patterns',
-    author: 'Michael Chan',
-    url: 'https://reactpatterns.com/',
-    likes: 7,
-    __v: 0
-  },
-  {
-    _id: '5a422aa71b54a676234d17f8',
-    title: 'Go To Statement Considered Harmful',
-    author: 'Edsger W. Dijkstra',
-    url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
-    likes: 5,
-    __v: 0
-  },
-  {
-    _id: '5a422b3a1b54a676234d17f9',
-    title: 'Canonical string reduction',
-    author: 'Edsger W. Dijkstra',
-    url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
-    likes: 12,
-    __v: 0
-  },
-  {
-    _id: '5a422b891b54a676234d17fa',
-    title: 'First class tests',
-    author: 'Robert C. Martin',
-    url: 'http://blog.cleancoder.com/uncle-bob/2017/05/05/TestDefinitions.htmll',
-    likes: 10,
-    __v: 0
-  },
-  {
-    _id: '5a422ba71b54a676234d17fb',
-    title: 'TDD harms architecture',
-    author: 'Robert C. Martin',
-    url: 'http://blog.cleancoder.com/uncle-bob/2017/03/03/TDD-Harms-Architecture.html',
-    likes: 0,
-    __v: 0
-  },
-  {
-    _id: '5a422bc61b54a676234d17fc',
-    title: 'Type wars',
-    author: 'Robert C. Martin',
-    url: 'http://blog.cleancoder.com/uncle-bob/2016/05/01/TypeWars.html',
-    likes: 2,
-    __v: 0
-  }
-]
-
 beforeEach(async () => {
   await Blog.deleteMany({})
-  const blogObjects = listWithManyBlogs.map((blog) => new Blog(blog))
+  const blogObjects = helper.listWithManyBlogs.map((blog) => new Blog(blog))
   const promiseArray = blogObjects.map((blog) => blog.save())
   await Promise.all(promiseArray)
 })
 
-test('blogs are returned as json', async () => {
-  await api
-    .get('/api/blogs')
-    .expect(200)
-    .expect('Content-Type', /application\/json/)
+describe('GET', () => {
+  test('blogs are returned as json', async () => {
+    await api
+      .get('/api/blogs')
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+  })
+
+  test('all blogs are returned', async () => {
+    const response = await api.get('/api/blogs')
+    assert.strictEqual(response.body.length, helper.listWithManyBlogs.length)
+  })
+
+  test('blogs have a property named id', async () => {
+    const response = await api.get('/api/blogs')
+    assert.ok('id' in response.body[0])
+  })
 })
 
-test('all blogs are returned', async () => {
-  const response = await api.get('/api/blogs')
-  assert.strictEqual(response.body.length, listWithManyBlogs.length)
+describe('POST', () => {
+  test('blog is correctly added to the database', async () => {
+    const newBlog = {
+      title: 'Title',
+      author: 'Author',
+      url: 'http://url.com',
+      likes: 1
+    }
+    const blogsAtStart = await helper.blogsInDatabase()
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+    const blogsAtEnd = await helper.blogsInDatabase()
+    const addedBlog = blogsAtEnd.find((blog) => blog.title === newBlog.title)
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length + 1)
+    assert.ok('id' in addedBlog)
+    assert.strictEqual(addedBlog.author, newBlog.author)
+    assert.strictEqual(addedBlog.url, newBlog.url)
+    assert.strictEqual(addedBlog.likes, newBlog.likes)
+  })
+
+  test('blog with missing likes property defaults to 0', async () => {
+    const newBlog = {
+      title: 'No Likes',
+      author: 'Disliked',
+      url: 'http://meh.com'
+    }
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+    const blogsAtEnd = await helper.blogsInDatabase()
+    const addedBlog = blogsAtEnd.find((blog) => blog.title === 'No Likes')
+    assert.strictEqual(addedBlog.likes, 0)
+  })
+
+  test('title missing results in bad request', async () => {
+    const newBlog = {
+      author: 'Untitled',
+      url: 'http://untitled.com',
+      likes: 1
+    }
+    await api.post('/api/blogs').send(newBlog).expect(400)
+  })
+
+  test('url missing results in bad request', async () => {
+    const newBlog = {
+      title: 'No URL',
+      author: 'Urless',
+      likes: 1
+    }
+    await api.post('/api/blogs').send(newBlog).expect(400)
+  })
 })
 
-test('blogs have a property named id', async () => {
-  const response = await api.get('/api/blogs')
-  assert.ok('id' in response.body[0])
+describe('DELETE', () => {
+  test('a blog can be deleted', async () => {
+    const blogsAtStart = await helper.blogsInDatabase()
+    const blogToDelete = blogsAtStart[0]
+    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204)
+    const blogsAtEnd = await helper.blogsInDatabase()
+    const titles = blogsAtEnd.map((blog) => blog.title)
+    assert(!titles.includes(blogToDelete.title))
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1)
+  })
 })
 
-test('blog is correctly added to the database', async () => {
-  const newBlog = {
-    title: 'Title',
-    author: 'Author',
-    url: 'http://url.com',
-    likes: 1
-  }
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(201)
-    .expect('Content-Type', /application\/json/)
-  const response = await api.get('/api/blogs')
-  const match = response.body.find((blog) => blog.url === newBlog.url)
-  assert.strictEqual(response.body.length, listWithManyBlogs.length + 1)
-  assert.strictEqual(match.title, newBlog.title)
-  assert.strictEqual(match.author, newBlog.author)
-})
-
-test('blog with missing likes property defaults to 0', async () => {
-  const newBlog = {
-    title: 'No Likes',
-    author: 'Disliked',
-    url: 'http://meh.com'
-  }
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(201)
-    .expect('Content-Type', /application\/json/)
-  const response = await api.get('/api/blogs')
-  const addedBlog = response.body.find((blog) => blog.title === 'No Likes')
-  assert.strictEqual(addedBlog.likes, 0)
-})
-
-test('title missing results in bad request', async () => {
-  const newBlog = {
-    author: 'Untitled',
-    url: 'http://untitled.com',
-    likes: 1
-  }
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(400)
-})
-
-test('url missing results in bad request', async () => {
-  const newBlog = {
-    title: 'NO URL',
-    author: 'Urless',
-    likes: 1
-  }
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(400)
-})
-
-test('a blog can be deleted', async () => {
-  const blogToDelete = listWithManyBlogs[0]
-  await api
-    .delete(`/api/blogs/${blogToDelete._id}`)
-    .expect(204)
-  const response = await api.get('/api/blogs')
-  const titles = response.body.map((blog) => blog.title)
-  assert(!titles.includes(blogToDelete.title))
-  assert.strictEqual(response.body.length, listWithManyBlogs.length - 1)
+describe('PUT', () => {
+  test('a blog can be updated', async () => {
+    const blogsAtStart = await helper.blogsInDatabase()
+    await api
+      .put(`/api/blogs/${blogsAtStart[0].id}`)
+      .send({ ...blogsAtStart[0], likes: blogsAtStart[0].likes + 1 })
+      .expect(200)
+    const blogsAtEnd = await helper.blogsInDatabase()
+    const updatedBlog = blogsAtEnd.find((blog) => blog.id === blogsAtStart[0].id)
+    assert.strictEqual(blogsAtStart.length, blogsAtEnd.length)
+    assert.strictEqual(updatedBlog.title, blogsAtStart[0].title)
+    assert.strictEqual(updatedBlog.author, blogsAtStart[0].author)
+    assert.strictEqual(updatedBlog.url, blogsAtStart[0].url)
+    assert.strictEqual(updatedBlog.likes, blogsAtStart[0].likes + 1)
+  })
 })
 
 after(async () => {
