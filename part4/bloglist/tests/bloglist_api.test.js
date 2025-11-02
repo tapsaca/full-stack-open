@@ -10,9 +10,7 @@ const api = supertest(app)
 
 beforeEach(async () => {
   await Blog.deleteMany({})
-  const blogObjects = helper.listWithManyBlogs.map((blog) => new Blog(blog))
-  const promiseArray = blogObjects.map((blog) => blog.save())
-  await Promise.all(promiseArray)
+  await Blog.insertMany(helper.listWithManyBlogs)
 })
 
 describe('GET', () => {
@@ -118,6 +116,14 @@ describe('PUT', () => {
     assert.strictEqual(updatedBlog.author, blogsAtStart[0].author)
     assert.strictEqual(updatedBlog.url, blogsAtStart[0].url)
     assert.strictEqual(updatedBlog.likes, blogsAtStart[0].likes + 1)
+  })
+
+  test('updating nonexistant blog results in not found', async () => {
+    const deletedBlog = await helper.deletedBlog()
+    await api
+      .put(`/api/blogs/${deletedBlog.id}`)
+      .send({ ...deletedBlog, likes: deletedBlog.likes + 1 })
+      .expect(404)
   })
 })
 

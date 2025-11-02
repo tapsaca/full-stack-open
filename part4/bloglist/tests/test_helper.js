@@ -62,6 +62,18 @@ const listWithManyBlogs = [
   }
 ]
 
+const deletedBlog = async () => {
+  const blog = new Blog({
+    title: 'Remove This',
+    author: 'Nobody',
+    url: 'http://remove.net',
+    likes: 1
+  })
+  const addedBlog = await blog.save()
+  await blog.deleteOne()
+  return addedBlog.toJSON()
+}
+
 const blogsInDatabase = async () => {
   const blogs = await Blog.find({})
   return blogs.map((blog) => blog.toJSON())
@@ -70,5 +82,6 @@ const blogsInDatabase = async () => {
 module.exports = {
   listWithOneBlog,
   listWithManyBlogs,
+  deletedBlog,
   blogsInDatabase
 }
