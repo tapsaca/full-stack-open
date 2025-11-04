@@ -47,25 +47,68 @@ describe('POST', () => {
     assert(usernames.includes(newUser.username))
   })
 
+  test('results in 400 if username is missing', async () => {
+    const usersAtStart = await helper.usersInDatabase()
+    const result = await api
+      .post('/api/users')
+      .send({ password: 'password' })
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+    const usersAtEnd = await helper.usersInDatabase()
+    assert(result.body.error.includes('username is required'))
+    assert.strictEqual(usersAtStart.length, usersAtEnd.length)
+  })
+
+  test('results in 400 if username is shorter than 3 characters', async () => {
+    const usersAtStart = await helper.usersInDatabase()
+    const result = await api
+      .post('/api/users')
+      .send({ username: 'ab', password: 'password' })
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+    const usersAtEnd = await helper.usersInDatabase()
+    assert(result.body.error.includes('username must be at least 3 characters long'))
+    assert.strictEqual(usersAtStart.length, usersAtEnd.length)
+  })
+
+  test('results in 400 if username is not unique', async () => {
+    const usersAtStart = await helper.usersInDatabase()
+    const newUser = {
+      username: 'root',
+      name: 'superuser',
+      password: 'password'
+    }
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+    const usersAtEnd = await helper.usersInDatabase()
+    assert(result.body.error.includes('username must be unique'))
+    assert.strictEqual(usersAtStart.length, usersAtEnd.length)
+  })
+
   test('results in 400 if password is missing', async () => {
     const usersAtStart = await helper.usersInDatabase()
-    await api
+    const result = await api
       .post('/api/users')
       .send({ username: 'username' })
       .expect(400)
       .expect('Content-Type', /application\/json/)
     const usersAtEnd = await helper.usersInDatabase()
+    assert(result.body.error.includes('password is required'))
     assert.strictEqual(usersAtEnd.length, usersAtStart.length)
   })
 
   test('results in 400 if password is shorter than 3 characters', async () => {
     const usersAtStart = await helper.usersInDatabase()
-    await api
+    const result = await api
       .post('/api/users')
       .send({ username: 'username', password: 'ab' })
       .expect(400)
       .expect('Content-Type', /application\/json/)
     const usersAtEnd = await helper.usersInDatabase()
+    assert(result.body.error.includes('password must be at least 3 characters long'))
     assert.strictEqual(usersAtEnd.length, usersAtStart.length)
   })
 })
