@@ -5,11 +5,13 @@ const supertest = require('supertest')
 const app = require('../app')
 const helper = require('./test_helper')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 const api = supertest(app)
 
 beforeEach(async () => {
   await Blog.deleteMany({})
+  await User.deleteMany({})
   await Blog.insertMany(helper.listWithManyBlogs)
 })
 
@@ -33,12 +35,25 @@ describe('GET', () => {
 })
 
 describe('POST', () => {
+  beforeEach(async () => {
+    const user = {
+      username: 'root',
+      name: 'Superuser',
+      password: 'password'
+    }
+    await api
+      .post('/api/users')
+      .send(user)
+  })
+
   test('blog is correctly added to the database', async () => {
+    const usersAtStart = await helper.usersInDatabase()
     const newBlog = {
       title: 'Title',
       author: 'Author',
       url: 'http://url.com',
-      likes: 1
+      likes: 1,
+      user: usersAtStart[0].id
     }
     const blogsAtStart = await helper.blogsInDatabase()
     await api
@@ -53,13 +68,16 @@ describe('POST', () => {
     assert.strictEqual(addedBlog.author, newBlog.author)
     assert.strictEqual(addedBlog.url, newBlog.url)
     assert.strictEqual(addedBlog.likes, newBlog.likes)
+    assert.strictEqual(addedBlog.user.toString(), usersAtStart[0].id)
   })
 
   test('blog with missing likes property defaults to 0', async () => {
+    const usersAtStart = await helper.usersInDatabase()
     const newBlog = {
       title: 'No Likes',
       author: 'Disliked',
-      url: 'http://meh.com'
+      url: 'http://meh.com',
+      user: usersAtStart[0].id
     }
     await api
       .post('/api/blogs')
@@ -72,21 +90,33 @@ describe('POST', () => {
   })
 
   test('title missing results in bad request', async () => {
+    const usersAtStart = await helper.usersInDatabase()
     const newBlog = {
       author: 'Untitled',
       url: 'http://untitled.com',
-      likes: 1
+      likes: 1,
+      user: usersAtStart[0].id
     }
-    await api.post('/api/blogs').send(newBlog).expect(400)
+    const result = await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+    assert(result.body.error.includes('title is required'))
   })
 
   test('url missing results in bad request', async () => {
+    const usersAtStart = await helper.usersInDatabase()
     const newBlog = {
       title: 'No URL',
       author: 'Urless',
-      likes: 1
+      likes: 1,
+      user: usersAtStart[0].id
     }
-    await api.post('/api/blogs').send(newBlog).expect(400)
+    const result = await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+    assert(result.body.error.includes('url is required'))
   })
 })
 
