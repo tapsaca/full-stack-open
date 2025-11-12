@@ -9,10 +9,24 @@ const User = require('../models/user')
 
 const api = supertest(app)
 
+let token
+
 beforeEach(async () => {
   await Blog.deleteMany({})
   await User.deleteMany({})
   await Blog.insertMany(helper.listWithManyBlogs)
+  const user = {
+    username: 'root',
+    name: 'Superuser',
+    password: 'password'
+  }
+  await api
+    .post('/api/users')
+    .send(user)
+  const response = await api
+    .post('/api/login')
+    .send(user)
+  token = response.body.token
 })
 
 describe('GET', () => {
@@ -35,17 +49,6 @@ describe('GET', () => {
 })
 
 describe('POST', () => {
-  beforeEach(async () => {
-    const user = {
-      username: 'root',
-      name: 'Superuser',
-      password: 'password'
-    }
-    await api
-      .post('/api/users')
-      .send(user)
-  })
-
   test('blog is correctly added to the database', async () => {
     const usersAtStart = await helper.usersInDatabase()
     const newBlog = {
@@ -58,6 +61,7 @@ describe('POST', () => {
     const blogsAtStart = await helper.blogsInDatabase()
     await api
       .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
       .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/)
@@ -71,6 +75,22 @@ describe('POST', () => {
     assert.strictEqual(addedBlog.user.toString(), usersAtStart[0].id)
   })
 
+  test('results in 401 if token is not provided', async () => {
+    const newBlog = {
+      title: 'Title',
+      author: 'Author',
+      url: 'http://url.com',
+      likes: 1,
+    }
+    const blogsAtStart = await helper.blogsInDatabase()
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(401)
+    const blogsAtEnd = await helper.blogsInDatabase()
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length)
+  })
+
   test('blog with missing likes property defaults to 0', async () => {
     const usersAtStart = await helper.usersInDatabase()
     const newBlog = {
@@ -82,6 +102,7 @@ describe('POST', () => {
     await api
       .post('/api/blogs')
       .send(newBlog)
+      .set('Authorization', `Bearer ${token}`)
       .expect(201)
       .expect('Content-Type', /application\/json/)
     const blogsAtEnd = await helper.blogsInDatabase()
@@ -99,6 +120,7 @@ describe('POST', () => {
     }
     const result = await api
       .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
       .send(newBlog)
       .expect(400)
     assert(result.body.error.includes('title is required'))
@@ -114,6 +136,7 @@ describe('POST', () => {
     }
     const result = await api
       .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
       .send(newBlog)
       .expect(400)
     assert(result.body.error.includes('url is required'))
@@ -122,13 +145,36 @@ describe('POST', () => {
 
 describe('DELETE', () => {
   test('a blog can be deleted', async () => {
+    const newBlog = {
+      title: 'Title',
+      author: 'Author',
+      url: 'http://url.com',
+      likes: 1
+    }
+    const response = await api
+      .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
+      .send(newBlog)
+    const blogToDelete = response.body
     const blogsAtStart = await helper.blogsInDatabase()
-    const blogToDelete = blogsAtStart[0]
-    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204)
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204)
     const blogsAtEnd = await helper.blogsInDatabase()
     const titles = blogsAtEnd.map((blog) => blog.title)
     assert(!titles.includes(blogToDelete.title))
     assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1)
+  })
+
+  test('results in 401 if token is not provided', async () => {
+    const blogsAtStart = await helper.blogsInDatabase()
+    const blogToDelete = blogsAtStart[0]
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .expect(401)
+    const blogsAtEnd = await helper.blogsInDatabase()
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length)
   })
 })
 
