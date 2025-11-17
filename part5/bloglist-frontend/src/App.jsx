@@ -11,6 +11,7 @@ const App = () => {
   const [isErrorNotification, setIsErrorNotification] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [blogFormVisible, setBlogFormVisible] = useState(false)
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [url, setUrl] = useState('')
@@ -56,12 +57,16 @@ const App = () => {
   const addBlog = async (event) => {
     event.preventDefault()
     try {
-      const addedBlog = await blogService.createBlog({ title, author, url }, user.token)
+      const addedBlog = await blogService.createBlog(
+        { title, author, url },
+        user.token
+      )
       setBlogs(blogs.concat(addedBlog))
       showNotification(`a new blog ${title} by ${author} added`)
       setTitle('')
       setAuthor('')
       setUrl('')
+      setBlogFormVisible(false)
     } catch (error) {
       showNotification(error.response.data.error, true)
     }
@@ -108,40 +113,48 @@ const App = () => {
       </p>
       {user && (
         <div>
-          <h2>create new</h2>
-          <form onSubmit={addBlog}>
-            <div>
-              <label>
-                title:
-                <input
-                  type="text"
-                  value={title}
-                  onChange={({ target }) => setTitle(target.value)}
-                />
-              </label>
-            </div>
-            <div>
-              <label>
-                author:
-                <input
-                  type="text"
-                  value={author}
-                  onChange={({ target }) => setAuthor(target.value)}
-                />
-              </label>
-            </div>
-            <div>
-              <label>
-                url:
-                <input
-                  type="text"
-                  value={url}
-                  onChange={({ target }) => setUrl(target.value)}
-                />
-              </label>
-            </div>
-            <button type="submit">create</button>
-          </form>
+          <div style={{ display: blogFormVisible ? 'none' : '' }}>
+            <button onClick={() => setBlogFormVisible(true)}>
+              create new blog
+            </button>
+          </div>
+          <div style={{ display: blogFormVisible ? '' : 'none' }}>
+            <h2>create new</h2>
+            <form onSubmit={addBlog}>
+              <div>
+                <label>
+                  title:
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={({ target }) => setTitle(target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label>
+                  author:
+                  <input
+                    type="text"
+                    value={author}
+                    onChange={({ target }) => setAuthor(target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <label>
+                  url:
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={({ target }) => setUrl(target.value)}
+                  />
+                </label>
+              </div>
+              <button type="submit">create</button>
+            </form>
+            <button onClick={() => setBlogFormVisible(false)}>cancel</button>
+          </div>
         </div>
       )}
       {blogs.map((blog) => (
