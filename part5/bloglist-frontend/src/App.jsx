@@ -66,6 +66,7 @@ const App = () => {
 
   const updateBlog = async (blog) => {
     const updatedBlog = await blogService.updateBlog(blog, user.token)
+    updatedBlog.user = { name: user.name, username: user.username }
     setBlogs(blogs.map((blog) => blog.id !== updatedBlog.id ? blog : updatedBlog))
   }
 
