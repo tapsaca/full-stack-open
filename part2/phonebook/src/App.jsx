@@ -30,6 +30,16 @@ const App = () => {
     setNewNumber('')
   }
 
+  const deletePerson = (id) => {
+    if (confirm(`Delete ${persons.find((person) => person.id === id).name}?`)) {
+      personService
+        .deletePerson(id)
+        .then((deletedPerson) =>
+          setPersons(persons.filter((person) => deletedPerson.id !== person.id))
+        )
+    }
+  }
+
   const handleSearchChange = (event) => {
     setNewSearch(event.target.value)
   }
@@ -55,7 +65,7 @@ const App = () => {
         numberValue={newNumber}
       />
       <h2>Numbers</h2>
-      <Persons persons={persons} search={search} />
+      <Persons persons={persons} search={search} handleDelete={deletePerson} />
     </div>
   )
 }
