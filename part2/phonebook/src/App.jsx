@@ -18,14 +18,21 @@ const App = () => {
 
   const addPerson = (event) => {
     event.preventDefault()
-    const newPerson = { name: newName, number: newNumber }
-    if (persons.some((person) => person.name === newPerson.name)) {
-      alert(`${newPerson.name} is already added to phonebook`)
-      return
+    const personToUpdate = persons.find((person) => person.name === newName)
+    if (personToUpdate) {
+      if (confirm(`${personToUpdate.name} is already added to phonebook, replace old number with a new one?`)) {
+        personService
+          .updatePerson(personToUpdate.id, { ...personToUpdate, number: newNumber })
+          .then((returnedPerson) => setPersons(persons.map((person) => person.id === returnedPerson.id ? returnedPerson : person)))
+      } else {
+        return
+      }
+    } else {
+      const newPerson = { name: newName, number: newNumber }
+      personService
+        .createPerson(newPerson)
+        .then((returnedPerson) => setPersons(persons.concat(returnedPerson)))
     }
-    personService
-      .createPerson(newPerson)
-      .then((returnedPerson) => setPersons(persons.concat(returnedPerson)))
     setNewName('')
     setNewNumber('')
   }
