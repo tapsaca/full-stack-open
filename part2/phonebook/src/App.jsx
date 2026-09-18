@@ -10,7 +10,10 @@ const App = () => {
   const [search, setNewSearch] = useState('')
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
-  const [notification, setNotification] = useState(null)
+  const [notification, setNotification] = useState({
+    message: null,
+    color: null
+  })
 
   useEffect(() => {
     personService
@@ -38,7 +41,7 @@ const App = () => {
                 person.id === returnedPerson.id ? returnedPerson : person
               )
             )
-            setNotification(`Updated ${personToUpdate.name}`)
+            showNotification(`Updated ${personToUpdate.name}`, 'green')
           })
       } else {
         return
@@ -47,24 +50,34 @@ const App = () => {
       const newPerson = { name: newName, number: newNumber }
       personService.createPerson(newPerson).then((returnedPerson) => {
         setPersons(persons.concat(returnedPerson))
-        setNotification(`Added ${returnedPerson.name}`)
+        showNotification(`Added ${returnedPerson.name}`, 'green')
       })
     }
-    setTimeout(() => {
-      setNotification(null)
-    }, 5000)
     setNewName('')
     setNewNumber('')
   }
 
   const deletePerson = (id) => {
-    if (confirm(`Delete ${persons.find((person) => person.id === id).name}?`)) {
+    const personToDelete = persons.find((person) => person.id === id)
+    if (confirm(`Delete ${personToDelete.name}`)) {
       personService
         .deletePerson(id)
-        .then((deletedPerson) =>
+        .then((deletedPerson) => {
+          showNotification(`Deleted ${deletedPerson.name}`, 'green')
           setPersons(persons.filter((person) => deletedPerson.id !== person.id))
-        )
+        })
+        .catch(() => {
+          showNotification(`Information of ${personToDelete.name} has already been removed from server`, 'red')
+          setPersons(persons.filter((person) => person.id !== personToDelete.id))
+        })
     }
+  }
+
+  const showNotification = (message, color) => {
+    setNotification({ message, color })
+    setTimeout(() => {
+      setNotification({ ...notification, message: null })
+    }, 5000)
   }
 
   const handleSearchChange = (event) => {
@@ -82,7 +95,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
-      <Notification message={notification} />
+      <Notification message={notification.message} color={notification.color} />
       <Search value={search} onChange={handleSearchChange} />
       <h2>add a new</h2>
       <PersonForm
