@@ -1,6 +1,6 @@
 import CountryDetails from './CountryDetails'
 
-const Countries = ({ countries, filter }) => {
+const Countries = ({ countries, filter, setFilter }) => {
   const filteredCountries = countries.filter((country) =>
     country.name.common.toLowerCase().includes(filter.toLowerCase())
   )
@@ -11,7 +11,7 @@ const Countries = ({ countries, filter }) => {
     return (
       <div>
         {filteredCountries.map((country) => (
-          <div key={country.cca2}>{country.name.common}</div>
+          <div key={country.cca2}>{country.name.common} <button onClick={() => setFilter(country.name.common)}>Show</button></div>
         ))}
       </div>
     )
