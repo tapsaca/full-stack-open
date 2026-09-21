@@ -21,7 +21,13 @@ const App = () => {
       <div>
         find countries <input value={filter} onChange={handleFilterChange} />
       </div>
-      {filter ? <Countries countries={countries} filter={filter} setFilter={setFilter} /> : null}
+      {filter ? (
+        <Countries
+          countries={countries}
+          filter={filter}
+          setFilter={setFilter}
+        />
+      ) : null}
     </div>
   )
 }
