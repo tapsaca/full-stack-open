@@ -43,6 +43,18 @@ app.get('/api/persons/:id', (request, response) => {
   }
 })
 
+app.post('/api/persons', (request, response) => {
+  const body = request.body
+  const id = Math.floor(Math.random() * 10000 + 1)
+  const person = {
+    id: id,
+    name: body.name,
+    number: body.number,
+  }
+  persons = persons.concat(person)
+  response.json(person)
+})
+
 app.delete('/api/persons/:id', (request, response) => {
   persons = persons.filter((person) => person.id !== request.params.id)
   return response.status(204).end()
