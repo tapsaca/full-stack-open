@@ -1,9 +1,16 @@
 const express = require('express')
 const morgan = require('morgan')
+const util = require('util')
 const app = express()
 
 app.use(express.json())
-app.use(morgan('tiny'))
+app.use(
+  morgan(':method :url :status :res[content-length] - :response-time ms :body')
+)
+
+morgan.token('body', (req) =>
+  req.method !== 'POST' ? ' ' : util.inspect(req.body, { compact: true })
+)
 
 let persons = [
   {
